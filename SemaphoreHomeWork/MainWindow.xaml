@@ -21,9 +21,9 @@
                 <RowDefinition Height="1*"/>
             </Grid.RowDefinitions>
             <Label Grid.Row="0" Content="Working Threads" HorizontalContentAlignment="Center" VerticalContentAlignment="Bottom" FontSize="20" Foreground="Black"/>
-            <ListBox Grid.Row="1" Margin="5"/>
             <Label Grid.Row="2" Content="Place in Semaphore" HorizontalContentAlignment="Center" VerticalContentAlignment="Bottom" FontSize="20" Foreground="Black"/>
-            <ui:NumberBox Min="0" Grid.Row="3" Margin="5"/>
+            <ListBox x:Name="WorkingListBox" Grid.Row="1" Margin="5" ItemsSource="{Binding WorkingThreads}"/>
+            <ui:NumberBox DecimalPlaces="0" Name="PlaceInSemaphoreNumberBox" Min="0" Grid.Row="3" Margin="35,0" Value="6"/>
         </Grid>
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
@@ -32,7 +32,7 @@
                 <RowDefinition Height="1.8*"/>
             </Grid.RowDefinitions>
             <Label Grid.Row="0" Content="Waiting Threads" HorizontalContentAlignment="Center" VerticalContentAlignment="Bottom" FontSize="20" Foreground="Black"/>
-            <ListBox Grid.Row="1" Margin="5"/>
+            <ListBox x:Name="WaitingListBox" Grid.Row="1" Margin="5" ItemsSource="{Binding WaitingThreads}"/>
         </Grid>
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>
@@ -41,8 +41,8 @@
                 <RowDefinition Height="1.8*"/>
             </Grid.RowDefinitions>
             <Label Grid.Row="0" Content="Created Threads" HorizontalContentAlignment="Center" VerticalContentAlignment="Bottom" FontSize="20" Foreground="Black"/>
-            <ListBox Grid.Row="1" Margin="5"/>
-            <ui:Button Grid.Row="3" Height="40" Width="120" HorizontalAlignment="Right" Margin="15" Content="Create New"/>
+            <ListBox x:Name="CreatedThreadsListBox" Grid.Row="1" Margin="5" ItemsSource="{Binding CreatedThreads}" MouseDoubleClick="CreatedThreadsListBox_MouseDoubleClick"/>
+            <ui:Button Grid.Row="3" Height="40" Width="120" HorizontalAlignment="Right" Margin="15" Content="Create New" Click="Button_Click"/>
         </Grid>
     </Grid>
 </ui:UiWindow>

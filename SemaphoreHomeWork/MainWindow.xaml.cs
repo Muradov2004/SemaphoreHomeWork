@@ -26,15 +26,18 @@ public partial class MainWindow : UiWindow
     public ObservableCollection<string> CreatedThreads { get; set; } = new();
     public ObservableCollection<string> WaitingThreads { get; set; } = new();
     public ObservableCollection<string> WorkingThreads { get; set; } = new();
-    static int placeInSemaphore = 1;
-    Semaphore semaphore = new(placeInSemaphore, placeInSemaphore);
+
+    public static int placeInSemaphore { get; set; } = 6;
+
+    Semaphore semaphore;
+
     int ThreadCount = 1;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        placeInSemaphore = Convert.ToInt32(PlaceInSemaphoreNumberBox.Value);
+        semaphore = new(placeInSemaphore, placeInSemaphore);
 
         DataContext = this;
     }
@@ -46,30 +49,43 @@ public partial class MainWindow : UiWindow
 
     void ThreadMethod(object state)
     {
-        var s = state as Semaphore;
+        var data = state as ThreadData;
         bool st = false;
         Random rnd = new();
         while (!st)
         {
-            if (s!.WaitOne(1500))
+            if (data!.Semaphore.WaitOne(1500))
             {
                 try
                 {
-                    WorkingThreads.Add($"{Thread.CurrentThread.Name} ->{Thread.CurrentThread.ManagedThreadId}");
-                    Thread.Sleep(rnd.Next(2000, 5000));
+                    if (WaitingThreads.Contains(data.Name))
+                        Dispatcher.Invoke(() => WaitingThreads.Remove(data.Name));
+
+                    Thread.CurrentThread.Name = data.Name;
+
+                    var threadInfo = $"{Thread.CurrentThread.Name} -> {Thread.CurrentThread.ManagedThreadId}";
+
+                    if (!WorkingThreads.Contains(threadInfo))
+                        Dispatcher.Invoke(() => WorkingThreads.Add(threadInfo));
+                    Thread.Sleep(rnd.Next(2000, 30000));
                 }
                 finally
                 {
                     st = true;
-                    s.Release();
+
+                    var threadInfo = $"{Thread.CurrentThread.Name} -> {Thread.CurrentThread.ManagedThreadId}";
+
+                    if (!WorkingThreads.Contains(threadInfo))
+                        Dispatcher.Invoke(() => WorkingThreads.Remove(threadInfo));
+                    data.Semaphore.Release();
                 }
             }
             else
             {
-                WaitingThreads.Add(Thread.CurrentThread.Name!);
+                if (!WaitingThreads.Contains(data.Name))
+                    Dispatcher.Invoke(() => WaitingThreads.Add(data.Name!));
             }
         }
-
     }
 
     private void CreatedThreadsListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
@@ -78,7 +94,11 @@ public partial class MainWindow : UiWindow
         if (CreatedThreadsListBox.SelectedItem is not null)
         {
             WaitingThreads.Add(CreatedThreadsListBox.SelectedItem.ToString()!);
+            ThreadPool.QueueUserWorkItem(ThreadMethod!, new ThreadData(semaphore,
+                CreatedThreadsListBox.SelectedItem.ToString()!));
             CreatedThreads.Remove(CreatedThreadsListBox.SelectedItem.ToString()!);
         }
     }
+
+    private void PlaceInSemaphoreNumberBox_TextChanged(object sender, TextChangedEventArgs e) => placeInSemaphore = Convert.ToInt32(PlaceInSemaphoreNumberBox.Value);
 }

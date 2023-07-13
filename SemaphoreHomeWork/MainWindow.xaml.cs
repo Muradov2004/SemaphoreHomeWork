@@ -47,6 +47,60 @@ public partial class MainWindow : UiWindow
         CreatedThreads.Add($"Thread {ThreadCount++}");
     }
 
+    //void ThreadMethod(object state)
+    //{
+    //    var data = state as ThreadData;
+    //    bool st = false;
+    //    Random rnd = new();
+    //    while (!st)
+    //    {
+    //        if (data!.Semaphore.WaitOne(1500))
+    //        {
+    //            try
+    //            {
+    //                if (WaitingThreads.Contains(data.Name))
+    //                    Dispatcher.Invoke(() => WaitingThreads.Remove(data.Name));
+
+    //                Thread.CurrentThread.Name = data.Name;
+
+    //                var threadInfo = $"{Thread.CurrentThread.Name} -> {Thread.CurrentThread.ManagedThreadId}";
+
+    //                if (!WorkingThreads.Contains(threadInfo))
+    //                    Dispatcher.Invoke(() => WorkingThreads.Add(threadInfo));
+    //                Thread.Sleep(rnd.Next(2000, 20000));
+    //            }
+    //            finally
+    //            {
+    //                st = true;
+
+    //                var threadInfo = $"{Thread.CurrentThread.Name} -> {Thread.CurrentThread.ManagedThreadId}";
+
+    //                if (!string.IsNullOrEmpty(Thread.CurrentThread.Name))
+    //                {
+    //                    Dispatcher.Invoke(() => WorkingThreads.Remove(threadInfo));
+    //                }
+
+    //                data.Semaphore.Release();
+    //            }
+    //        }
+    //        else
+    //        {
+    //            if (!WaitingThreads.Contains(data.Name))
+    //                Dispatcher.Invoke(() => WaitingThreads.Add(data.Name!));
+    //        }
+    //    }
+    //}
+    //private void WaitingListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    //{
+    //    if (WaitingListBox.SelectedItem is not null)
+    //    {
+    //        CreatedThreads.Add(WaitingListBox.SelectedItem.ToString()!);
+    //        WaitingThreads.Remove(WaitingListBox.SelectedItem.ToString()!);
+    //    }
+    //}
+
+    private Dictionary<string, Thread> waitingThreads = new Dictionary<string, Thread>();
+
     void ThreadMethod(object state)
     {
         var data = state as ThreadData;
@@ -58,8 +112,11 @@ public partial class MainWindow : UiWindow
             {
                 try
                 {
-                    if (WaitingThreads.Contains(data.Name))
+                    if (waitingThreads.ContainsKey(data.Name))
+                    {
                         Dispatcher.Invoke(() => WaitingThreads.Remove(data.Name));
+                        waitingThreads.Remove(data.Name);
+                    }
 
                     Thread.CurrentThread.Name = data.Name;
 
@@ -85,11 +142,45 @@ public partial class MainWindow : UiWindow
             }
             else
             {
-                if (!WaitingThreads.Contains(data.Name))
-                    Dispatcher.Invoke(() => WaitingThreads.Add(data.Name!));
+                if (!waitingThreads.ContainsKey(data.Name))
+                {
+                    Dispatcher.Invoke(() =>
+                    {
+                        WaitingThreads.Add(data.Name);
+                        waitingThreads[data.Name] = Thread.CurrentThread;
+                    });
+
+                    // Wait until signaled to continue
+                    var resetEvent = new ManualResetEventSlim();
+                    resetEvent.Wait();
+                    resetEvent.Dispose();
+                }
             }
         }
     }
+
+    private void WaitingListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (WaitingListBox.SelectedItem is not null)
+        {
+            var selectedThread = WaitingListBox.SelectedItem.ToString();
+            CreatedThreads.Add(selectedThread!);
+            WaitingThreads.Remove(selectedThread!);
+
+            if (waitingThreads.TryGetValue(selectedThread!, out var thread))
+            {
+                // Signal the thread to release from the semaphore
+                var resetEvent = new ManualResetEventSlim();
+                resetEvent.Set();
+                resetEvent.Dispose();
+
+                // Remove the thread from the dictionary
+                waitingThreads.Remove(selectedThread);
+            }
+        }
+    }
+
+
 
     private void CreatedThreadsListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
@@ -105,13 +196,4 @@ public partial class MainWindow : UiWindow
 
     private void PlaceInSemaphoreNumberBox_TextChanged(object sender, TextChangedEventArgs e) => placeInSemaphore = Convert.ToInt32(PlaceInSemaphoreNumberBox.Value);
 
-    private void WaitingListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        if (WaitingListBox.SelectedItem is not null)
-        {
-            CreatedThreads.Add(WaitingListBox.SelectedItem.ToString()!);
-            WaitingThreads.Remove(WaitingListBox.SelectedItem.ToString()!);
-        }
-
-    }
 }

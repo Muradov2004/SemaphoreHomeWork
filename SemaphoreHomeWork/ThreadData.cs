@@ -6,6 +6,8 @@ public class ThreadData
 {
     public Semaphore Semaphore { get; set; }
     public string Name { get; set; }
+    public bool StopWaiting { get; set; } = false;
+
 
     public ThreadData(Semaphore semaphore, string name)
     {

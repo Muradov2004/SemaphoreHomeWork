@@ -32,7 +32,7 @@
                 <RowDefinition Height="1.8*"/>
             </Grid.RowDefinitions>
             <Label Grid.Row="0" Content="Waiting Threads" HorizontalContentAlignment="Center" VerticalContentAlignment="Bottom" FontSize="20" Foreground="Black"/>
-            <ListBox x:Name="WaitingListBox" Grid.Row="1" Margin="5" ItemsSource="{Binding WaitingThreads}"/>
+            <ListBox x:Name="WaitingListBox" Grid.Row="1" Margin="5" ItemsSource="{Binding WaitingThreads}" MouseDoubleClick="WaitingListBox_MouseDoubleClick"/>
         </Grid>
         <Grid Grid.Column="2">
             <Grid.RowDefinitions>

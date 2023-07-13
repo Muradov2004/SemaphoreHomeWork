@@ -67,7 +67,7 @@ public partial class MainWindow : UiWindow
 
                     if (!WorkingThreads.Contains(threadInfo))
                         Dispatcher.Invoke(() => WorkingThreads.Add(threadInfo));
-                    Thread.Sleep(rnd.Next(2000, 30000));
+                    Thread.Sleep(rnd.Next(2000, 20000));
                 }
                 finally
                 {
@@ -75,8 +75,11 @@ public partial class MainWindow : UiWindow
 
                     var threadInfo = $"{Thread.CurrentThread.Name} -> {Thread.CurrentThread.ManagedThreadId}";
 
-                    if (!WorkingThreads.Contains(threadInfo))
+                    if (!string.IsNullOrEmpty(Thread.CurrentThread.Name))
+                    {
                         Dispatcher.Invoke(() => WorkingThreads.Remove(threadInfo));
+                    }
+
                     data.Semaphore.Release();
                 }
             }
@@ -101,4 +104,14 @@ public partial class MainWindow : UiWindow
     }
 
     private void PlaceInSemaphoreNumberBox_TextChanged(object sender, TextChangedEventArgs e) => placeInSemaphore = Convert.ToInt32(PlaceInSemaphoreNumberBox.Value);
+
+    private void WaitingListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (WaitingListBox.SelectedItem is not null)
+        {
+            CreatedThreads.Add(WaitingListBox.SelectedItem.ToString()!);
+            WaitingThreads.Remove(WaitingListBox.SelectedItem.ToString()!);
+        }
+
+    }
 }

@@ -27,7 +27,7 @@ public partial class MainWindow : UiWindow
     public ObservableCollection<string> WaitingThreads { get; set; } = new();
     public ObservableCollection<string> WorkingThreads { get; set; } = new();
 
-    public static int placeInSemaphore { get; set; } = 6;
+    public static int placeInSemaphore { get; set; } = 3;
 
     Semaphore semaphore;
 
@@ -44,33 +44,40 @@ public partial class MainWindow : UiWindow
 
     private void Button_Click(object sender, RoutedEventArgs e)
     {
-        CreatedThreads.Add($"Thread {ThreadCount++}");
+        var threadName = $"Thread {ThreadCount++}";
+        Thread thread = new(ThreadMethod!)
+        {
+            Name = threadName
+        };
+        threads.Add(thread);
+        CreatedThreads.Add(threadName);
     }
 
     void ThreadMethod(object state)
     {
-        var data = state as ThreadData;
+        var s = state as Semaphore;
         bool st = false;
+        bool stopSemaphore = false;
         Random rnd = new();
         while (!st)
         {
-            if (data!.StopWaiting)
-            {
-                st = true;
-            }
-            else
+            if (stopSemaphore)
+                s!.Release();
+
+
+            var threadName = Thread.CurrentThread.Name;
+
+            try
             {
 
-                if (data!.Semaphore.WaitOne(1500))
+                if (s!.WaitOne(1500))
                 {
+                    var threadInfo = $"{threadName} -> {Thread.CurrentThread.ManagedThreadId}";
                     try
                     {
-                        if (WaitingThreads.Contains(data.Name))
-                            Dispatcher.Invoke(() => WaitingThreads.Remove(data.Name));
+                        if (WaitingThreads.Contains(threadName!))
+                            Dispatcher.Invoke(() => WaitingThreads.Remove(threadName!));
 
-                        Thread.CurrentThread.Name = data.Name;
-
-                        var threadInfo = $"{Thread.CurrentThread.Name} -> {Thread.CurrentThread.ManagedThreadId}";
 
                         if (!WorkingThreads.Contains(threadInfo))
                             Dispatcher.Invoke(() => WorkingThreads.Add(threadInfo));
@@ -80,35 +87,30 @@ public partial class MainWindow : UiWindow
                     {
                         st = true;
 
-                        var threadInfo = $"{Thread.CurrentThread.Name} -> {Thread.CurrentThread.ManagedThreadId}";
-
                         if (!string.IsNullOrEmpty(Thread.CurrentThread.Name))
-
                             Dispatcher.Invoke(() =>
                             {
                                 WorkingThreads.Remove(threadInfo);
-                                threadDatas.Remove(data);
                             });
-
-                        data.Semaphore.Release();
+                        stopSemaphore = true;
                     }
                 }
-                else
-                {
-                    if (!WaitingThreads.Contains(data.Name))
-                        Dispatcher.Invoke(() => WaitingThreads.Add(data.Name!));
-                }
+            }
+            catch (Exception)
+            {
+                stopSemaphore = true;
+                //Thread.CurrentThread.Interrupt();
             }
         }
     }
-    List<ThreadData> threadDatas = new();
+    List<Thread> threads = new();
 
     private void WaitingListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         if (WaitingListBox.SelectedItem is not null)
         {
-            var thread = threadDatas.FirstOrDefault(td => td.Name == WaitingListBox.SelectedItem.ToString());
-            thread!.StopWaiting = true;
+            var thread = threads.FirstOrDefault(t => t.Name == WaitingListBox.SelectedItem.ToString());
+            if (thread!.ThreadState == ThreadState.WaitSleepJoin) thread.Interrupt();
             WaitingThreads.Remove(WaitingListBox.SelectedItem.ToString()!);
         }
 
@@ -120,9 +122,8 @@ public partial class MainWindow : UiWindow
         if (CreatedThreadsListBox.SelectedItem is not null)
         {
             WaitingThreads.Add(CreatedThreadsListBox.SelectedItem.ToString()!);
-            Thread thread = new Thread(ThreadMethod!);
-            thread.Start(new ThreadData(semaphore, CreatedThreadsListBox.SelectedItem.ToString()!));
-            threadDatas.Add(new ThreadData(semaphore, CreatedThreadsListBox.SelectedItem.ToString()!));
+            var thread = threads.FirstOrDefault(t => t.Name == CreatedThreadsListBox.SelectedItem.ToString());
+            thread!.Start(semaphore);
             CreatedThreads.Remove(CreatedThreadsListBox.SelectedItem.ToString()!);
         }
     }
